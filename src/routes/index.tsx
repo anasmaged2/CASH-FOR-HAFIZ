@@ -129,7 +129,8 @@ function Home() {
               مراجعة الحافز
             </h1>
             <p className="mt-1 max-w-xl text-sm text-muted">
-              سبع مقارنات فقط. المستحق يمر. أي فشل يُكتب في ملف إكسل مع السبب.
+              صف مقابل صف، من غير بحث. الفرد في مكانه فقط لو الفحوصات السبعة على
+              نفس الصف سليمة. أي فشل ينزل في ملف الإكسل مع السبب.
             </p>
           </div>
         </div>
@@ -188,7 +189,7 @@ function Home() {
           />
           <DropZone
             title="شيت الصرف"
-            hint="الاسم، القومي، العسكري، المبلغ"
+            hint="حتى لو العناوين من صف 5 والأعمدة مترتبة مختلف"
             file={theirFile}
             onFile={setTheirFile}
           />
@@ -247,7 +248,7 @@ function Home() {
         </section>
       ) : (
         <p className="pb-8 text-center text-sm text-muted">
-          ارفع الشيتين أو شغّل المثال لتشوف النتيجة هنا. ملف التحميل فيه شيت
+          ارفع الشيتين أو شغّل المثال. المقارنة على نفس رقم الصف. التحميل فيه
           «غير مستحق» و«يحتاج مراجعة» مع عمود السبب.
         </p>
       )}
@@ -377,7 +378,7 @@ function ResultsTable({ rows }: { rows: PersonRow[] }) {
                 </div>
               </td>
               <td className="px-3 py-3 text-xs text-muted">
-                {r.reasons.join(" · ") || "مطابق ومستحق"}
+                {r.reasons.join(" · ") || "في مكانه — الفحوصات السبعة سليمة"}
               </td>
             </tr>
           ))}

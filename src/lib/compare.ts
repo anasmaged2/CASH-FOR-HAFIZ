@@ -35,12 +35,12 @@ export const CHECK_LABELS: { id: CheckId; label: string; hint: string }[] = [
   {
     id: "nameNid",
     label: "الاسم بالرقم القومي",
-    hint: "الاسم والرقم القومي يجب أن يطابقا شيت الصرف",
+    hint: "نفس الصف: الاسم والرقم القومي في شيتك = شيت الصرف",
   },
   {
     id: "nameMid",
     label: "الاسم بالرقم العسكري",
-    hint: "الاسم والرقم العسكري يجب أن يطابقا شيت الصرف",
+    hint: "نفس الصف: الاسم والرقم العسكري في شيتك = شيت الصرف",
   },
   {
     id: "personStatus",
@@ -55,7 +55,7 @@ export const CHECK_LABELS: { id: CheckId; label: string; hint: string }[] = [
   {
     id: "hardCase",
     label: "حالات المراجعة",
-    hint: "أي التباس يُترك لك ولا يُحذف من التقرير",
+    hint: "أي التباس يُترك لك. الفرد في مكانه فقط إذا الفحوصات السبعة سليمة",
   },
   {
     id: "sector",
@@ -111,29 +111,80 @@ export function findCol(
   headers: string[],
   candidates: string[],
 ): string | null {
-  const normed = headers.map((h) => ({ orig: h, n: normalizeArabic(h) }));
+  const normed = headers.map((h) => ({
+    orig: h,
+    n: normalizeArabic(h.replace(/\n/g, " ")),
+  }));
   for (const cand of candidates) {
     const nc = normalizeArabic(cand);
     for (const h of normed) if (h.n === nc) return h.orig;
   }
   for (const cand of candidates) {
     const nc = normalizeArabic(cand);
-    if (!nc) continue;
-    for (const h of normed) if (h.n.includes(nc)) return h.orig;
+    if (nc.length < 4) continue;
+    for (const h of normed) if (h.n.includes(nc) || nc.includes(h.n) && h.n.length >= 4) {
+      return h.orig;
+    }
   }
   return null;
 }
 
-const NID = ["رقم قومي", "الرقم القومي", "رقم القومي", "قومي", "رقم قومى", "الرقم القومى"];
-const MID = ["رقم عسكري", "الرقم العسكري", "رقم العسكري", "عسكري", "رقم عسكرى", "الرقم العسكرى"];
-const NAME = ["اسم", "الاسم", "الاسم الكامل", "الأسماء", "أسماء", "اسم الفرد"];
-const MODEL = ["حالة النموذج", "نموذج", "حالة نموذج", "حاله النموذج"];
-const STATUS = ["حالة الفرد", "حالة فرد", "الفرد", "حاله الفرد"];
-const DISC = ["تاريخ التسريح", "التسريح", "تسريح", "تاريخ تسريح"];
-const NOTES = ["ملاحظة", "ملاحظات", "ملاحظه"];
-const SECTOR = ["القطاع", "قطاع", "اسم القطاع"];
-const DEPT = ["الإدارة", "ادارة", "اسم الإدارة", "الادارة", "إدارة"];
-const AMOUNT = ["المبلغ", "قيمة الحافز", "الحافز", "مبلغ الحافز", "المبلغ المستحق", "حوافز", "حافز"];
+export const NID = [
+  "رقم قومي",
+  "الرقم القومي",
+  "رقم القومي",
+  "قومي",
+  "رقم قومى",
+  "الرقم القومى",
+  "NID",
+  "national id",
+  "الرقم المدنى",
+];
+export const MID = [
+  "رقم عسكري",
+  "الرقم العسكري",
+  "رقم العسكري",
+  "عسكري",
+  "رقم عسكرى",
+  "الرقم العسكرى",
+  "MID",
+  "military id",
+];
+export const NAME = [
+  "اسم",
+  "الاسم",
+  "الاسم الكامل",
+  "الاسم الرباعي",
+  "الأسماء",
+  "أسماء",
+  "اسم الفرد",
+  "اسم الجندي",
+  "name",
+];
+export const MODEL = ["حالة النموذج", "نموذج", "حالة نموذج", "حاله النموذج"];
+export const STATUS = ["حالة الفرد", "حالة فرد", "حاله الفرد", "وضع الفرد"];
+export const DISC = ["تاريخ التسريح", "التسريح", "تسريح", "تاريخ تسريح", "موعد التسريح"];
+export const NOTES = ["ملاحظة", "ملاحظات", "ملاحظه"];
+export const SECTOR = ["القطاع", "قطاع", "اسم القطاع"];
+export const DEPT = ["الإدارة", "ادارة", "اسم الإدارة", "الادارة", "إدارة"];
+export const AMOUNT = ["المبلغ", "قيمة الحافز", "الحافز", "مبلغ الحافز", "المبلغ المستحق", "حوافز", "حافز"];
+
+export const HEADER_GROUPS = [NID, MID, NAME, STATUS, DISC, SECTOR, DEPT, AMOUNT, MODEL, NOTES];
+
+export function scoreHeaderRow(cells: string[]): number {
+  const headers = cells.map((c) => asText(c).replace(/\n/g, " ")).filter(Boolean);
+  if (!headers.length) return 0;
+  let score = 0;
+  if (findCol(headers, NAME)) score += 3;
+  if (findCol(headers, NID)) score += 3;
+  if (findCol(headers, MID)) score += 3;
+  if (findCol(headers, STATUS)) score += 2;
+  if (findCol(headers, DISC)) score += 2;
+  if (findCol(headers, SECTOR)) score += 1;
+  if (findCol(headers, DEPT)) score += 1;
+  if (findCol(headers, AMOUNT)) score += 1;
+  return score;
+}
 
 function pick(row: Record<string, string>, col: string | null): string {
   if (!col) return "";
@@ -207,22 +258,90 @@ function dischargeCheck(
   return { result: "pass", reason: "" };
 }
 
-function mapById(rows: Record<string, string>[], col: string | null) {
-  const map = new Map<string, Record<string, string>>();
-  if (!col) return map;
-  for (const row of rows) {
-    const key = normalizeId(row[col]);
-    if (key && !map.has(key)) map.set(key, row);
+function emptyRow(row: Record<string, string> | undefined): boolean {
+  if (!row) return true;
+  return Object.values(row).every((v) => !asText(v));
+}
+
+function looksLikePerson(
+  row: Record<string, string>,
+  nidCol: string | null,
+  midCol: string | null,
+): boolean {
+  if (normalizeId(pick(row, nidCol)).length >= 6) return true;
+  if (normalizeId(pick(row, midCol)).length >= 4) return true;
+  return Object.values(row).some((v) => /\d{5,}/.test(asText(v)));
+}
+
+function dropNonPeople(
+  rows: Record<string, string>[],
+  nidCol: string | null,
+  midCol: string | null,
+): Record<string, string>[] {
+  return rows.filter((r) => !emptyRow(r) && looksLikePerson(r, nidCol, midCol));
+}
+
+function identityHit(
+  aNid: string,
+  aMid: string,
+  bNid: string,
+  bMid: string,
+): boolean {
+  if (aNid && bNid && aNid === bNid) return true;
+  if (aMid && bMid && aMid === bMid) return true;
+  return false;
+}
+
+/** Shift lists so the same people line up when one file started a few rows later. */
+function alignLists(
+  yours: Record<string, string>[],
+  theirs: Record<string, string>[],
+  yNid: string | null,
+  yMid: string | null,
+  tNid: string | null,
+  tMid: string | null,
+): { yours: Record<string, string>[]; theirs: Record<string, string>[] } {
+  const yKeys = yours.map((r) => ({
+    nid: normalizeId(pick(r, yNid)),
+    mid: normalizeId(pick(r, yMid)),
+  }));
+  const tKeys = theirs.map((r) => ({
+    nid: normalizeId(pick(r, tNid)),
+    mid: normalizeId(pick(r, tMid)),
+  }));
+  const maxOff = 12;
+  let best = { hits: -1, yOff: 0, tOff: 0, len: 0 };
+  for (let yOff = 0; yOff <= Math.min(maxOff, yours.length); yOff++) {
+    for (let tOff = 0; tOff <= Math.min(maxOff, theirs.length); tOff++) {
+      const len = Math.min(yours.length - yOff, theirs.length - tOff);
+      if (len <= 0) continue;
+      let hits = 0;
+      for (let i = 0; i < len; i++) {
+        if (identityHit(yKeys[yOff + i].nid, yKeys[yOff + i].mid, tKeys[tOff + i].nid, tKeys[tOff + i].mid)) {
+          hits++;
+        }
+      }
+      if (hits > best.hits || (hits === best.hits && len > best.len)) {
+        best = { hits, yOff, tOff, len };
+      }
+    }
   }
-  return map;
+  if (best.hits <= 0) return { yours, theirs };
+  return { yours: yours.slice(best.yOff), theirs: theirs.slice(best.tOff) };
+}
+
+function allKeys(rows: Record<string, string>[]): string[] {
+  const set = new Set<string>();
+  for (const r of rows) for (const k of Object.keys(r)) set.add(k);
+  return [...set];
 }
 
 export function compareSheets(input: CompareInput): PersonRow[] {
-  const yours = Array.isArray(input.yours) ? input.yours : [];
-  const theirs = Array.isArray(input.theirs) ? input.theirs : [];
+  let yours = Array.isArray(input.yours) ? input.yours : [];
+  let theirs = Array.isArray(input.theirs) ? input.theirs : [];
 
-  const yHeaders = yours[0] ? Object.keys(yours[0]) : [];
-  const tHeaders = theirs[0] ? Object.keys(theirs[0]) : [];
+  const yHeaders = allKeys(yours);
+  const tHeaders = allKeys(theirs);
 
   const yourNid = findCol(yHeaders, NID);
   const yourMid = findCol(yHeaders, MID);
@@ -239,8 +358,9 @@ export function compareSheets(input: CompareInput): PersonRow[] {
   const theirName = findCol(tHeaders, NAME);
   const theirAmount = findCol(tHeaders, AMOUNT);
 
-  const byMid = mapById(theirs, theirMid);
-  const byNid = mapById(theirs, theirNid);
+  yours = dropNonPeople(yours, yourNid, yourMid);
+  theirs = dropNonPeople(theirs, theirNid, theirMid);
+  ({ yours, theirs } = alignLists(yours, theirs, yourNid, yourMid, theirNid, theirMid));
 
   let autoSector = asText(input.sectorName);
   if (yourSector) {
@@ -255,36 +375,35 @@ export function compareSheets(input: CompareInput): PersonRow[] {
   const reviewedSector = asText(input.sectorName) || autoSector;
 
   const out: PersonRow[] = [];
+  const n = Math.max(yours.length, theirs.length);
   let seq = 1;
 
-  for (const yrow of yours) {
-    const name = pick(yrow, yourName);
-    const nid = pick(yrow, yourNid);
-    const mid = pick(yrow, yourMid);
-    const sector = pick(yrow, yourSector);
-    const dept = pick(yrow, yourDept);
-    const notes = pick(yrow, yourNotes);
-    const model = pick(yrow, yourModel);
-    const status = pick(yrow, yourStatus);
-    const discharge = pick(yrow, yourDisc);
+  for (let i = 0; i < n; i++) {
+    const yrow = yours[i];
+    const trow = theirs[i];
+    if (emptyRow(yrow) && emptyRow(trow)) continue;
 
-    const empty =
-      !name && !normalizeId(nid) && !normalizeId(mid) && !sector && !dept && !status;
-    if (empty) continue;
+    const name = pick(yrow ?? {}, yourName);
+    const nid = pick(yrow ?? {}, yourNid);
+    const mid = pick(yrow ?? {}, yourMid);
+    const sector = pick(yrow ?? {}, yourSector);
+    const dept = pick(yrow ?? {}, yourDept);
+    const notes = pick(yrow ?? {}, yourNotes);
+    const model = pick(yrow ?? {}, yourModel);
+    const status = pick(yrow ?? {}, yourStatus);
+    const discharge = pick(yrow ?? {}, yourDisc);
+
+    const hasTheir = !emptyRow(trow);
+    const tName = hasTheir ? pick(trow ?? {}, theirName) : "";
+    const tNid = hasTheir ? pick(trow ?? {}, theirNid) : "";
+    const tMid = hasTheir ? pick(trow ?? {}, theirMid) : "";
+    const amount = hasTheir ? pick(trow ?? {}, theirAmount) : "";
 
     const nidKey = normalizeId(nid);
     const midKey = normalizeId(mid);
-    let their = midKey ? byMid.get(midKey) : undefined;
-    if (!their && nidKey) their = byNid.get(nidKey);
-
-    const tName = their ? pick(their, theirName) : "";
-    const tNid = their ? pick(their, theirNid) : "";
-    const tMid = their ? pick(their, theirMid) : "";
-    const amount = their ? pick(their, theirAmount) : "";
-
     const nidMatch = Boolean(nidKey) && nidKey === normalizeId(tNid);
     const midMatch = Boolean(midKey) && midKey === normalizeId(tMid);
-    const nameEq = their ? namesEquivalent(name, tName) : false;
+    const nameEq = hasTheir ? namesEquivalent(name, tName) : false;
 
     const checks: Record<CheckId, CheckResult> = {
       nameNid: "pass",
@@ -300,31 +419,34 @@ export function compareSheets(input: CompareInput): PersonRow[] {
       checks.hardCase = "review";
     };
 
-    if (!their) {
+    // Same-row identity — no VLOOKUP. Wrong name/IDs on this row = not in the right spot.
+    if (!yrow || emptyRow(yrow)) {
       checks.nameNid = "fail";
       checks.nameMid = "fail";
-      reasons.push("غير موجود في شيت الصرف");
+      reasons.push("صف زائد في شيت الصرف بدون مقابل في شيتك — ليس في مكانه");
+    } else if (!hasTheir) {
+      checks.nameNid = "fail";
+      checks.nameMid = "fail";
+      reasons.push("لا يوجد صف مقابل في شيت الصرف — ليس في مكانه");
     } else {
-      if (!nidMatch) {
-        checks.nameNid = "fail";
-        reasons.push("اختلاف الرقم القومي");
-      }
-      if (!midMatch) {
-        checks.nameMid = "fail";
-        reasons.push("اختلاف الرقم العسكري");
-      }
-      if (nameEq === null) {
-        if (nidMatch) checks.nameNid = "review";
-        if (midMatch) checks.nameMid = "review";
+      if (!nidMatch || nameEq === false) {
+        checks.nameNid = nameEq === null && nidMatch ? "review" : "fail";
+        reasons.push("الاسم بالرقم القومي في هذا الصف لا يطابق شيت الصرف — ليس في مكانه");
+      } else if (nameEq === null) {
+        checks.nameNid = "review";
         markReview();
-        reasons.push("الاسم ناقص للمقارنة");
-      } else if (nameEq === false) {
-        if (nidMatch) checks.nameNid = "review";
-        else checks.nameNid = checks.nameNid === "fail" ? "fail" : "review";
-        if (midMatch) checks.nameMid = "review";
-        else checks.nameMid = checks.nameMid === "fail" ? "fail" : "review";
+        reasons.push("الاسم ناقص للمقارنة في صف الرقم القومي");
+      }
+      if (!midMatch || nameEq === false) {
+        checks.nameMid = nameEq === null && midMatch ? "review" : "fail";
+        if (!reasons.some((r) => r.includes("الرقم العسكري") || r.includes("الرقم القومي"))) {
+          reasons.push("الاسم بالرقم العسكري في هذا الصف لا يطابق شيت الصرف — ليس في مكانه");
+        } else if (!midMatch) {
+          reasons.push("الرقم العسكري في هذا الصف لا يطابق شيت الصرف — ليس في مكانه");
+        }
+      } else if (nameEq === null) {
+        checks.nameMid = "review";
         markReview();
-        reasons.push("الاسم غير مطابق مع الرقم");
       }
     }
 
@@ -381,16 +503,16 @@ export function compareSheets(input: CompareInput): PersonRow[] {
 
     out.push({
       seq: seq++,
-      name,
-      nid,
-      mid,
+      name: name || tName,
+      nid: nid || tNid,
+      mid: mid || tMid,
       sector,
       dept,
       notes,
       model,
       status,
       discharge,
-      theirName: their ? tName : "غير موجود",
+      theirName: hasTheir ? tName : "لا يوجد صف مقابل",
       theirNid: tNid,
       theirMid: tMid,
       amount,
