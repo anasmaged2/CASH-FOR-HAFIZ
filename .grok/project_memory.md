@@ -1,0 +1,2 @@
+- Allowance matcher app (حافز) for جهاز مستقبل مصر; source discussed from pasted PyQt6 Excel comparer [2026-09-02]
+- Rules: match name+NID and name+MID vs org sheet; حالة الفرد موجود or مجلس طبي allow, خارج deny; discharge on payment-month day-1 and for 3 months after التسريح ineligible; keep hard cases for manual review; قطاع must match reviewed sector; الإدارة must be a real dept in that sector [2026-09-02]
